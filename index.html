@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRコード作成ツール</title>
+  <!-- QRCode.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .container {
+      background: var(--card);
+      width: 100%;
+      max-width: 440px;
+      padding: 32px 24px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
+    button {
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 12px 20px;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    details {
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .option-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .option-item label {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    select, input[type="color"] {
+      width: 100%;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      padding: 2px 6px;
+    }
+
+    .result-area {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 20px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .result-area.active {
+      display: flex;
+    }
+
+    #qr-preview {
+      padding: 16px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #qr-preview img, #qr-preview canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .btn-download {
+      width: 100%;
+      background-color: #10b981;
+      color: #fff;
+      padding: 12px;
+    }
+
+    .btn-download:hover {
+      background-color: #059669;
+    }
+
+    .error-msg {
+      color: #ef4444;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>QRコード作成</h1>
+    <p class="subtitle">URLやテキストを入力してPNG画像を生成します</p>
+
+    <div class="input-group">
+      <input type="text" id="url-input" placeholder="https://example.com" autocomplete="off">
+      <button type="button" id="generate-btn" class="btn-primary">作成</button>
+    </div>
+    <p id="error-msg" class="error-msg">URLまたはテキストを入力してください。</p>
+
+    <details>
+      <summary>サイズ・色のカスタマイズ</summary>
+      <div class="options-grid">
+        <div class="option-item">
+          <label for="qr-size">画像サイズ</label>
+          <select id="qr-size">
+            <option value="180">小 (180px)</option>
+            <option value="256" selected>中 (256px)</option>
+            <option value="400">大 (400px)</option>
+          </select>
+        </div>
+        <div class="option-item">
+          <label for="qr-dark">ドット色</label>
+          <input type="color" id="qr-dark" value="#000000">
+        </div>
+        <div class="option-item">
+          <label for="qr-light">背景色</label>
+          <input type="color" id="qr-light" value="#ffffff">
+        </div>
+      </div>
+    </details>
+
+    <div id="result-area" class="result-area">
+      <div id="qr-preview"></div>
+      <button type="button" id="download-btn" class="btn-download">PNGをダウンロード</button>
+    </div>
+  </div>
+
+  <!-- ライブラリ描画用の非表示コンテナ -->
+  <div id="qr-hidden" style="display: none;"></div>
+
+  <script>
+    const urlInput = document.getElementById('url-input');
+    const generateBtn = document.getElementById('generate-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const sizeSelect = document.getElementById('qr-size');
+    const darkInput = document.getElementById('qr-dark');
+    const lightInput = document.getElementById('qr-light');
+    const resultArea = document.getElementById('result-area');
+    const qrPreview = document.getElementById('qr-preview');
+    const qrHidden = document.getElementById('qr-hidden');
+    const errorMsg = document.getElementById('error-msg');
+
+    let finalDataUrl = '';
+
+    function generateQR() {
+      const text = urlInput.value.trim();
+      if (!text) {
+        errorMsg.style.display = 'block';
+        resultArea.classList.remove('active');
+        return;
+      }
+      errorMsg.style.display = 'none';
+
+      const size = parseInt(sizeSelect.value, 10);
+      const colorDark = darkInput.value;
+      const colorLight = lightInput.value;
+
+      // 既存のQRコードをクリア
+      qrHidden.innerHTML = '';
+      qrPreview.innerHTML = '';
+      qrPreview.style.backgroundColor = colorLight;
+
+      // QRコード生成
+      new QRCode(qrHidden, {
+        text: text,
+        width: size,
+        height: size,
+        colorDark: colorDark,
+        colorLight: colorLight,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      // 描画完了後に余白(クワイエットゾーン)付きPNGを生成
+      setTimeout(() => {
+        const sourceCanvas = qrHidden.querySelector('canvas');
+        if (!sourceCanvas) return;
+
+        const padding = Math.round(size * 0.08);
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = size + padding * 2;
+        exportCanvas.height = size + padding * 2;
+
+        const ctx = exportCanvas.getContext('2d');
+        ctx.fillStyle = colorLight;
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        ctx.drawImage(sourceCanvas, padding, padding);
+
+        finalDataUrl = exportCanvas.toDataURL('image/png');
+
+        const previewImg = document.createElement('img');
+        previewImg.src = finalDataUrl;
+        previewImg.alt = '生成されたQRコード';
+        qrPreview.appendChild(previewImg);
+
+        resultArea.classList.add('active');
+      }, 30);
+    }
+
+    // イベントリスナー
+    generateBtn.addEventListener('click', generateQR);
+
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        generateQR();
+      }
+    });
+
+    // オプション変更時にすでに生成済みならリアルタイム更新
+    [sizeSelect, darkInput, lightInput].forEach(el => {
+      el.addEventListener('change', () => {
+        if (urlInput.value.trim() && resultArea.classList.contains('active')) {
+          generateQR();
+        }
+      });
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!finalDataUrl) return;
+      const link = document.createElement('a');
+      link.href = finalDataUrl;
+      link.download = 'qrcode.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>
